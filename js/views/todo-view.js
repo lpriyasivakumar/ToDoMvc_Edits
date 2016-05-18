@@ -18,11 +18,14 @@ var app = app || {};
 		// The DOM events specific to an item.
 		events: {
 			'click .toggle': 'toggleCompleted',
+			'click .priority-btn': 'togglePriority',
 			'dblclick label': 'edit',
-			'click .destroy': 'clear',
+			'click .destroy': 'delete',
+			'click .edit-btn':'edit',
 			'keypress .edit': 'updateOnEnter',
 			'keydown .edit': 'revertOnEscape',
-			'blur .edit': 'close'
+			'blur .edit': 'close',
+			'click .restore': 'restore'
 		},
 
 		// The TodoView listens for changes to its model, re-rendering. Since
@@ -30,9 +33,15 @@ var app = app || {};
 		// **TodoView** in this app, we set a direct reference on the model for
 		// convenience.
 		initialize: function () {
+
+			this.$edit=$('.edit-btn');
+			this.$priority=$('.priority-btn');
+			this.$delete=$('.destroy');
+
 			this.listenTo(this.model, 'change', this.render);
 			this.listenTo(this.model, 'destroy', this.remove);
 			this.listenTo(this.model, 'visible', this.toggleVisible);
+			this.listenTo(this.model, 'showDeleted', this.showDeleted);
 		},
 
 		// Re-render the titles of the todo item.
@@ -50,6 +59,7 @@ var app = app || {};
 
 			this.$el.html(this.template(this.model.toJSON()));
 			this.$el.toggleClass('completed', this.model.get('completed'));
+			this.$el.toggleClass('priority', this.model.get('priority'));
 			this.toggleVisible();
 			this.$input = this.$('.edit');
 			return this;
@@ -60,16 +70,37 @@ var app = app || {};
 		},
 
 		isHidden: function () {
-			return this.model.get('completed') ?
-				app.TodoFilter === 'active' :
-				app.TodoFilter === 'completed';
-		},
+			if(!this.model.get('deleted')){
+				var state= this.model.get('completed') ?app.TodoFilter === 'active' :	app.TodoFilter === 'completed';
 
+				if(!state && !this.model.get('priority')){
+					return app.TodoFilter === 'priority';
+				}else{
+					return state;
+				}
+			}else{
+			return true;
+			}
+		},
+		// Toggle the `"priority"` state of the model.
+		togglePriority:function(){
+			this.model.togglePriority();
+		},
+		deleteMode:function(){
+			this.$el.removeClass('hidden');
+			this.$el.find('.edit-btn').hide();
+			this.$el.find('.priority-btn').hide();
+			this.$el.find('.destroy').hide();
+			this.$el.find('.toggle').hide();
+			this.$el.find('.restore').removeClass('hidden');
+		},
+		showDeleted:function(){
+			 this.model.get('deleted')?this.deleteMode():this.$el.addClass('hidden');
+		},
 		// Toggle the `"completed"` state of the model.
 		toggleCompleted: function () {
 			this.model.toggle();
 		},
-
 		// Switch this view into `"editing"` mode, displaying the input field.
 		edit: function () {
 			this.$el.addClass('editing');
@@ -80,7 +111,6 @@ var app = app || {};
 		close: function () {
 			var value = this.$input.val();
 			var trimmedValue = value.trim();
-
 			// We don't want to handle blur events from an item that is no
 			// longer being edited. Relying on the CSS class here has the
 			// benefit of us not having to maintain state in the DOM and the
@@ -125,8 +155,13 @@ var app = app || {};
 		},
 
 		// Remove the item, destroy the model from *localStorage* and delete its view.
-		clear: function () {
-			this.model.destroy();
+		delete: function () {
+			this.model.toggleState();
+			this.toggleVisible();
+		},
+		restore:function(){
+			this.model.toggleState();
+			this.showDeleted();
 		}
 	});
 })(jQuery);

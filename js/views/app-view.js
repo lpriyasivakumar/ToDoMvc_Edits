@@ -21,7 +21,8 @@ var app = app || {};
 		events: {
 			'keypress #new-todo': 'createOnEnter',
 			'click #clear-completed': 'clearCompleted',
-			'click #toggle-all': 'toggleAllComplete'
+			'click #toggle-all': 'toggleAllComplete',
+			'click .bin': 'showDeleted'
 		},
 
 		// At initialization we bind to the relevant events on the `Todos`
@@ -30,9 +31,12 @@ var app = app || {};
 		initialize: function () {
 			this.allCheckbox = this.$('#toggle-all')[0];
 			this.$input = this.$('#new-todo');
+			this.$select = this.$('#choose');
 			this.$footer = this.$('#footer');
 			this.$main = this.$('#main');
+			this.$head = this.$('#header');
 			this.$list = $('#todo-list');
+
 
 			this.listenTo(app.todos, 'add', this.addOne);
 			this.listenTo(app.todos, 'reset', this.addAll);
@@ -51,6 +55,7 @@ var app = app || {};
 		render: function () {
 			var completed = app.todos.completed().length;
 			var remaining = app.todos.remaining().length;
+			var priority = app.todos.priority().length;
 
 			if (app.todos.length) {
 				this.$main.show();
@@ -58,7 +63,8 @@ var app = app || {};
 
 				this.$footer.html(this.statsTemplate({
 					completed: completed,
-					remaining: remaining
+					remaining: remaining,
+					priority: priority
 				}));
 
 				this.$('#filters li a')
@@ -99,7 +105,9 @@ var app = app || {};
 			return {
 				title: this.$input.val().trim(),
 				order: app.todos.nextOrder(),
-				completed: false
+				completed: false,
+				priority:this.$select.val().trim() =='High'?true:false,
+				deleted:false
 			};
 		},
 
@@ -112,15 +120,20 @@ var app = app || {};
 			}
 		},
 
-		// Clear all completed todo items, destroying their models.
+		// Clear all completed todo items, toggle deleted for their models.
 		clearCompleted: function () {
-			_.invoke(app.todos.completed(), 'destroy');
+			_.invoke(app.todos.completed(), 'toggleState');
 			return false;
 		},
+		showDeleted:function(){
+			this.$main.hide();
+			app.todos.each(function (todo){
+				todo.trigger('showDeleted');
+			});
 
+		},
 		toggleAllComplete: function () {
 			var completed = this.allCheckbox.checked;
-
 			app.todos.each(function (todo) {
 				todo.save({
 					completed: completed

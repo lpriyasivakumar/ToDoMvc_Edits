@@ -18,14 +18,27 @@ var app = app || {};
 
 		// Filter down the list of all todo items that are finished.
 		completed: function () {
-			return this.where({completed: true});
+			return this.models.filter(function(model){
+				return (!model.get('deleted') && model.get('completed'));
+			});
 		},
 
 		// Filter down the list to only todo items that are still not finished.
 		remaining: function () {
-			return this.where({completed: false});
+			 return this.models.filter(function(model){
+				 return (!model.get('deleted')&& !model.get('completed'));
+			 });
 		},
-
+		// Filter down the list to only todo items that are priority.
+		priority:function(){
+			return this.models.filter(function(model){
+				return (!model.get('deleted')&& !model.get('completed') && model.get('priority'));
+			});
+		},
+		// Filter down the list to only todo items that are deleted.
+		deleted:function(){
+			return this.where({delete: true});
+		},
 		// We keep the Todos in sequential order, despite being saved by unordered
 		// GUID in the database. This generates the next order number for new items.
 		nextOrder: function () {
